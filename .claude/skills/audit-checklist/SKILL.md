@@ -29,8 +29,9 @@ Só duas saídas possíveis:
 
 1. Se reprovado: regenerar o conteúdo incluindo o motivo da reprovação
    no prompt de geração.
-2. Após **2 tentativas reprovadas** (ou seja, na 3ª reprovação),
-   **parar** de tentar automaticamente — marcar o nó como "revisar
-   manualmente" em vez de insistir.
+2. Máximo **2 tentativas de geração no total** (a original + 1
+   regeneração). Se as 2 forem reprovadas, **parar** de tentar
+   automaticamente — marcar o nó como "revisar manualmente" em vez de
+   insistir. Não existe uma 3ª tentativa automática.
 3. Registrar cada tentativa (aprovada ou não) no histórico de auditoria
    do nó (`generated_content.auditoria: [...]`).

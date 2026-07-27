@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 import numpy as np
@@ -124,4 +125,50 @@ def save_enrichment_results(
                 """,
                 e,
             )
+    conn.commit()
+
+
+def fetch_node(conn: sqlite3.Connection, node_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT id, label, roadmap_origin, description_md, node_type, generated_content FROM nodes WHERE id = ?",
+        (node_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "id": row[0],
+        "label": row[1],
+        "roadmap_origin": row[2],
+        "description_md": row[3],
+        "node_type": row[4],
+        "generated_content": json.loads(row[5]) if row[5] else None,
+    }
+
+
+def fetch_node_edges_with_labels(conn: sqlite3.Connection, node_id: str) -> tuple[list[dict], dict[str, dict]]:
+    rows = conn.execute(
+        "SELECT source_id, target_id, relation_type, origin, confidence FROM edges WHERE source_id = ? OR target_id = ?",
+        (node_id, node_id),
+    ).fetchall()
+    edges = [
+        {"source_id": r[0], "target_id": r[1], "relation_type": r[2], "origin": r[3], "confidence": r[4]}
+        for r in rows
+    ]
+    neighbor_ids = {e["source_id"] for e in edges} | {e["target_id"] for e in edges}
+    neighbor_ids.discard(node_id)
+    node_by_id = {}
+    if neighbor_ids:
+        placeholders = ",".join("?" for _ in neighbor_ids)
+        for r in conn.execute(
+            f"SELECT id, label FROM nodes WHERE id IN ({placeholders})", list(neighbor_ids)
+        ):
+            node_by_id[r[0]] = {"id": r[0], "label": r[1]}
+    return edges, node_by_id
+
+
+def save_generated_content(conn: sqlite3.Connection, node_id: str, generated_content: dict) -> None:
+    conn.execute(
+        "UPDATE nodes SET generated_content = ? WHERE id = ?",
+        (json.dumps(generated_content, ensure_ascii=False), node_id),
+    )
     conn.commit()
