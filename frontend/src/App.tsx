@@ -1,122 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { api } from "./api";
+import { EstudoTab } from "./components/EstudoTab";
+import { MapasTab } from "./components/MapasTab";
+import { MentoriaTab, type ActiveMentoria } from "./components/MentoriaTab";
+import { RevisaoTab } from "./components/RevisaoTab";
+import { TopNav, type Tab } from "./components/TopNav";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activeTab, setActiveTab] = useState<Tab>("mapas");
+  const [selectedRoadmap, setSelectedRoadmap] = useState<string | null>(null);
+  const [activeMentoria, setActiveMentoria] = useState<ActiveMentoria | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+
+  function openRoadmap(slug: string) {
+    setSelectedRoadmap(slug);
+    setActiveTab("estudo");
+  }
+
+  async function startMentoria(nodeId: string) {
+    try {
+      const node = await api.getNode(nodeId);
+      const resp = await api.startMentoria(nodeId);
+      setActiveMentoria({
+        sessionId: resp.session_id,
+        nodeId,
+        nodeLabel: node.label,
+        currentQuestion: resp.turn.text,
+      });
+      setActiveTab("mentoria");
+    } catch (e: any) {
+      setGlobalError(e.message || String(e));
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <TopNav active={activeTab} onChange={setActiveTab} />
+      {globalError && (
+        <div style={{ background: "var(--danger-dim)", color: "var(--text)", padding: "0.5rem 1.5rem" }}>
+          {globalError}{" "}
+          <button onClick={() => setGlobalError(null)} style={{ marginLeft: "0.5rem" }}>
+            fechar
+          </button>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      )}
+      <main style={{ flex: 1, padding: "1.5rem", overflow: "auto" }}>
+        {activeTab === "mapas" && <MapasTab onOpenRoadmap={openRoadmap} />}
+        {activeTab === "estudo" && (
+          <EstudoTab roadmapSlug={selectedRoadmap} onStartMentoria={startMentoria} />
+        )}
+        {activeTab === "mentoria" && (
+          <MentoriaTab
+            active={activeMentoria}
+            onUpdateQuestion={(text) =>
+              setActiveMentoria((m) => (m ? { ...m, currentQuestion: text } : m))
+            }
+            onSessionEnded={() => setActiveMentoria(null)}
+          />
+        )}
+        {activeTab === "revisao" && (
+          <RevisaoTab
+            onReopenMentoria={(nodeId) => {
+              startMentoria(nodeId);
+            }}
+          />
+        )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
