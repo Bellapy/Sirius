@@ -4,6 +4,7 @@ pydantic
 pyyaml
 numpy
 networkx
+sentence-transformers
 anthropic
 pytest
 httpx
