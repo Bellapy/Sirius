@@ -1,9 +1,15 @@
 import json
 import sqlite3
+import uuid
+from datetime import datetime, timezone
 
 import numpy as np
 
 from app.config import DB_PATH
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nodes (
@@ -28,6 +34,36 @@ CREATE TABLE IF NOT EXISTS edges (
     PRIMARY KEY (source_id, target_id, relation_type),
     FOREIGN KEY (source_id) REFERENCES nodes(id),
     FOREIGN KEY (target_id) REFERENCES nodes(id)
+);
+
+-- Estado visual do no. 'validado' so pode ser setado pelo veredito da
+-- mentoria (mentoria_sessions) — nunca por clique manual do usuario.
+CREATE TABLE IF NOT EXISTS node_progress (
+    node_id TEXT PRIMARY KEY,
+    status TEXT NOT NULL CHECK (status IN ('nao_iniciado', 'lido', 'validado')) DEFAULT 'nao_iniciado',
+    first_opened_at TEXT,
+    validated_at TEXT,
+    FOREIGN KEY (node_id) REFERENCES nodes(id)
+);
+
+CREATE TABLE IF NOT EXISTS mentoria_sessions (
+    id TEXT PRIMARY KEY,
+    node_id TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    veredito_validado INTEGER,
+    veredito_motivo TEXT,
+    FOREIGN KEY (node_id) REFERENCES nodes(id)
+);
+
+CREATE TABLE IF NOT EXISTS mentoria_turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    turn_index INTEGER NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('mentora', 'usuario')),
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES mentoria_sessions(id)
 );
 """
 
@@ -172,3 +208,96 @@ def save_generated_content(conn: sqlite3.Connection, node_id: str, generated_con
         (json.dumps(generated_content, ensure_ascii=False), node_id),
     )
     conn.commit()
+
+
+def get_node_progress(conn: sqlite3.Connection, node_id: str) -> dict:
+    row = conn.execute(
+        "SELECT status, first_opened_at, validated_at FROM node_progress WHERE node_id = ?",
+        (node_id,),
+    ).fetchone()
+    if row is None:
+        return {"node_id": node_id, "status": "nao_iniciado", "first_opened_at": None, "validated_at": None}
+    return {"node_id": node_id, "status": row[0], "first_opened_at": row[1], "validated_at": row[2]}
+
+
+def mark_node_opened(conn: sqlite3.Connection, node_id: str) -> None:
+    """Primeira abertura de um no: nao_iniciado -> lido. Nunca rebaixa um no
+    ja 'validado' ou ja 'lido'."""
+    current = get_node_progress(conn, node_id)
+    if current["status"] != "nao_iniciado":
+        return
+    conn.execute(
+        """
+        INSERT INTO node_progress (node_id, status, first_opened_at)
+        VALUES (?, 'lido', ?)
+        ON CONFLICT(node_id) DO UPDATE SET status = 'lido', first_opened_at = excluded.first_opened_at
+        WHERE node_progress.status = 'nao_iniciado'
+        """,
+        (node_id, _now()),
+    )
+    conn.commit()
+
+
+def start_mentoria_session(conn: sqlite3.Connection, node_id: str) -> str:
+    session_id = str(uuid.uuid4())
+    conn.execute(
+        "INSERT INTO mentoria_sessions (id, node_id, started_at) VALUES (?, ?, ?)",
+        (session_id, node_id, _now()),
+    )
+    conn.commit()
+    return session_id
+
+
+def add_mentoria_turn(conn: sqlite3.Connection, session_id: str, turn_index: int, role: str, text: str) -> None:
+    conn.execute(
+        "INSERT INTO mentoria_turns (session_id, turn_index, role, text, created_at) VALUES (?, ?, ?, ?, ?)",
+        (session_id, turn_index, role, text, _now()),
+    )
+    conn.commit()
+
+
+def end_mentoria_session(
+    conn: sqlite3.Connection, session_id: str, node_id: str, validado: bool, motivo: str
+) -> None:
+    """Veredito da mentora — a UNICA forma de um no chegar a status 'validado'
+    (ver skill de mentoria / especificacao, secao Interface)."""
+    conn.execute(
+        "UPDATE mentoria_sessions SET ended_at = ?, veredito_validado = ?, veredito_motivo = ? WHERE id = ?",
+        (_now(), int(validado), motivo, session_id),
+    )
+    if validado:
+        conn.execute(
+            """
+            INSERT INTO node_progress (node_id, status, validated_at)
+            VALUES (?, 'validado', ?)
+            ON CONFLICT(node_id) DO UPDATE SET status = 'validado', validated_at = excluded.validated_at
+            """,
+            (node_id, _now()),
+        )
+    conn.commit()
+
+
+def get_mentoria_sessions_for_node(conn: sqlite3.Connection, node_id: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT id, started_at, ended_at, veredito_validado, veredito_motivo
+        FROM mentoria_sessions WHERE node_id = ? ORDER BY started_at
+        """,
+        (node_id,),
+    ).fetchall()
+    return [
+        {
+            "id": r[0], "started_at": r[1], "ended_at": r[2],
+            "veredito_validado": bool(r[3]) if r[3] is not None else None,
+            "veredito_motivo": r[4],
+        }
+        for r in rows
+    ]
+
+
+def get_mentoria_turns(conn: sqlite3.Connection, session_id: str) -> list[dict]:
+    rows = conn.execute(
+        "SELECT turn_index, role, text, created_at FROM mentoria_turns WHERE session_id = ? ORDER BY turn_index",
+        (session_id,),
+    ).fetchall()
+    return [{"turn_index": r[0], "role": r[1], "text": r[2], "created_at": r[3]} for r in rows]
