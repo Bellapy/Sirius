@@ -33,37 +33,40 @@ function App() {
     }
   }
 
+  const isFullBleed = activeTab === "estudo";
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="app-shell">
       <TopNav active={activeTab} onChange={setActiveTab} />
       {globalError && (
-        <div style={{ background: "var(--danger-dim)", color: "var(--text)", padding: "0.5rem 1.5rem" }}>
-          {globalError}{" "}
-          <button onClick={() => setGlobalError(null)} style={{ marginLeft: "0.5rem" }}>
+        <div className="banner-error">
+          {globalError}
+          <button className="ghost" onClick={() => setGlobalError(null)}>
             fechar
           </button>
         </div>
       )}
-      <main style={{ flex: 1, padding: "1.5rem", overflow: "auto" }}>
-        {activeTab === "mapas" && <MapasTab onOpenRoadmap={openRoadmap} />}
-        {activeTab === "estudo" && (
-          <EstudoTab roadmapSlug={selectedRoadmap} onStartMentoria={startMentoria} />
-        )}
-        {activeTab === "mentoria" && (
-          <MentoriaTab
-            active={activeMentoria}
-            onUpdateQuestion={(text) =>
-              setActiveMentoria((m) => (m ? { ...m, currentQuestion: text } : m))
-            }
-            onSessionEnded={() => setActiveMentoria(null)}
-          />
-        )}
-        {activeTab === "revisao" && (
-          <RevisaoTab
-            onReopenMentoria={(nodeId) => {
-              startMentoria(nodeId);
-            }}
-          />
+      <main className="page" style={isFullBleed ? { display: "flex", flexDirection: "column" } : undefined}>
+        {isFullBleed ? (
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <EstudoTab roadmapSlug={selectedRoadmap} onStartMentoria={startMentoria} />
+          </div>
+        ) : (
+          <div className={`page-inner${activeTab === "mentoria" ? " narrow" : ""}`}>
+            {activeTab === "mapas" && <MapasTab onOpenRoadmap={openRoadmap} />}
+            {activeTab === "mentoria" && (
+              <MentoriaTab
+                active={activeMentoria}
+                onUpdateQuestion={(text) =>
+                  setActiveMentoria((m) => (m ? { ...m, currentQuestion: text } : m))
+                }
+                onSessionEnded={() => setActiveMentoria(null)}
+              />
+            )}
+            {activeTab === "revisao" && (
+              <RevisaoTab onReopenMentoria={(nodeId) => startMentoria(nodeId)} />
+            )}
+          </div>
         )}
       </main>
     </div>

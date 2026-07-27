@@ -14,43 +14,37 @@ export function RevisaoTab({ onReopenMentoria }: { onReopenMentoria: (nodeId: st
   }, []);
 
   if (error) return <p style={{ color: "var(--danger)" }}>Erro: {error}</p>;
-  if (!items) return <p style={{ color: "var(--text-dim)" }}>Carregando...</p>;
-  if (items.length === 0)
-    return <p style={{ color: "var(--text-dim)" }}>Nenhuma sessão de mentoria ainda.</p>;
+  if (!items)
+    return (
+      <div className="loading-state">
+        <span className="spinner" /> Carregando...
+      </div>
+    );
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div>
       <h2>Revisão</h2>
-      <p style={{ color: "var(--text-dim)" }}>
-        Nós com sessão de mentoria — os não validados aparecem primeiro, pra refazer.
-      </p>
-      <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {items.map((item) => (
-          <li
-            key={item.node_id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.6rem 0.9rem",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              background: "var(--bg-elevated)",
-            }}
-          >
-            <div>
-              <div>{item.label}</div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                {item.roadmap_origin} ·{" "}
-                {item.veredito_validado ? "validado" : "ainda não validado"}
+      <p className="muted">Nós com sessão de mentoria — os não validados aparecem primeiro, pra refazer.</p>
+      {items.length === 0 ? (
+        <p className="empty-state">Nenhuma sessão de mentoria ainda.</p>
+      ) : (
+        <ul className="list">
+          {items.map((item) => (
+            <li key={item.node_id} className="list-item">
+              <div>
+                <div className="list-item-title">{item.label}</div>
+                <div className="list-item-sub">{item.roadmap_origin}</div>
               </div>
-            </div>
-            <button className="primary" onClick={() => onReopenMentoria(item.node_id)}>
-              Refazer
-            </button>
-          </li>
-        ))}
-      </ul>
+              <span className={`badge${item.veredito_validado ? " badge-validado" : " badge-pendente"}`}>
+                <span className="badge-dot" /> {item.veredito_validado ? "validado" : "não validado"}
+              </span>
+              <button className="primary" onClick={() => onReopenMentoria(item.node_id)}>
+                Refazer
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

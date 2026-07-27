@@ -24,18 +24,18 @@ export function MentoriaTab({
 
   if (!active) {
     return (
-      <p style={{ color: "var(--text-dim)" }}>
-        Nenhuma sessão ativa. Abra um nó na aba Estudo (ou reabra um da Revisão) e clique em "Iniciar
-        Mentoria".
+      <p className="empty-state">
+        Nenhuma sessão ativa. Abra um nó na aba Estudo (ou reabra um da Revisão) e clique em
+        "Iniciar Mentoria".
       </p>
     );
   }
 
   if (ended) {
     return (
-      <div style={{ maxWidth: 560 }}>
+      <div>
         <h2>Sessão encerrada</h2>
-        <p style={{ color: "var(--text-dim)" }}>
+        <p className="muted">
           O estado do nó "{active.nodeLabel}" foi atualizado. Volte para Estudo para ver.
         </p>
         <button
@@ -80,34 +80,28 @@ export function MentoriaTab({
   }
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>Mentoria sobre "{active.nodeLabel}"</p>
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          padding: "1.25rem",
-          background: "var(--bg-elevated)",
-          marginBottom: "1rem",
-        }}
-      >
-        <p style={{ margin: 0, fontSize: "1.05rem" }}>{active.currentQuestion}</p>
+    <div>
+      <div className="mentoria-node-label">Mentoria · {active.nodeLabel}</div>
+      <div className="mentoria-card">
+        <p className="mentoria-question">{active.currentQuestion}</p>
       </div>
-      <textarea
-        rows={5}
-        style={{ width: "100%" }}
-        placeholder="Escreva sua resposta com suas próprias palavras..."
-        value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
-      />
-      {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
-      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
-        <button className="primary" disabled={sending || !answer.trim()} onClick={submit}>
-          Responder
-        </button>
-        <button disabled={sending} onClick={encerrar}>
-          Encerrar sessão
-        </button>
+      <div className="stack-gap-md">
+        <textarea
+          rows={5}
+          style={{ width: "100%" }}
+          placeholder="Escreva sua resposta com suas próprias palavras..."
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+        />
+        {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
+        <div style={{ display: "flex", gap: "0.6rem" }}>
+          <button className="primary" disabled={sending || !answer.trim()} onClick={submit}>
+            {sending ? <span className="spinner" /> : null} Responder
+          </button>
+          <button className="danger-outline" disabled={sending} onClick={encerrar}>
+            Encerrar sessão
+          </button>
+        </div>
       </div>
     </div>
   );

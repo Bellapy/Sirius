@@ -35,51 +35,56 @@ export function MapasTab({ onOpenRoadmap }: { onOpenRoadmap: (slug: string) => v
     return <p style={{ color: "var(--danger)" }}>Erro: {error}</p>;
   }
   if (!roadmaps) {
-    return <p style={{ color: "var(--text-dim)" }}>Carregando roadmaps...</p>;
+    return (
+      <div className="loading-state">
+        <span className="spinner" /> Carregando roadmaps...
+      </div>
+    );
   }
 
   const filtered = roadmaps.filter((r) => r.slug.includes(filter.toLowerCase()));
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div>
       <h2>Mapas</h2>
-      <p style={{ color: "var(--text-dim)" }}>
-        Escolha um roadmap do{" "}
-        <code style={{ color: "var(--text)" }}>developer-roadmap</code> para estudar. Importar +
-        enriquecer roda a classificação de estrutura uma única vez (modo simulado por padrão).
+      <p className="muted">
+        Escolha um roadmap do <code>developer-roadmap</code> para estudar. Importar carrega a
+        estrutura original; em seguida a classificação de tipos e conexões roda uma única vez
+        (modo simulado por padrão, sem custo).
       </p>
       <input
-        placeholder="filtrar..."
+        className="search-input"
+        placeholder="Filtrar roadmaps..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
-        style={{ width: "100%", marginBottom: "1rem" }}
       />
-      <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <ul className="list">
         {filtered.map((r) => (
-          <li
-            key={r.slug}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.6rem 0.9rem",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              background: "var(--bg-elevated)",
-            }}
-          >
-            <span>{r.slug}</span>
+          <li key={r.slug} className="list-item">
+            <div>
+              <div className="list-item-title">{r.slug}</div>
+              <div className="list-item-sub">
+                {r.imported ? "importado e pronto para estudo" : "ainda não importado"}
+              </div>
+            </div>
             {r.imported ? (
               <button className="primary" onClick={() => onOpenRoadmap(r.slug)}>
                 Abrir
               </button>
             ) : (
               <button disabled={busySlug === r.slug} onClick={() => handleImportAndEnrich(r.slug)}>
-                {busySlug === r.slug ? "Importando..." : "Importar"}
+                {busySlug === r.slug ? (
+                  <>
+                    <span className="spinner" /> Importando...
+                  </>
+                ) : (
+                  "Importar"
+                )}
               </button>
             )}
           </li>
         ))}
+        {filtered.length === 0 && <li className="empty-state">Nenhum roadmap encontrado para "{filter}".</li>}
       </ul>
     </div>
   );

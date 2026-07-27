@@ -9,30 +9,14 @@ const TABS: { id: Tab; label: string }[] = [
 
 export function TopNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <nav
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "1.5rem",
-        padding: "0.75rem 1.5rem",
-        borderBottom: "1px solid var(--border)",
-        background: "var(--bg-elevated)",
-      }}
-    >
-      <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: "1.15rem" }}>
-        Sirius
-      </span>
-      <div style={{ display: "flex", gap: "0.25rem" }}>
+    <nav className="top-nav">
+      <span className="nav-brand">Sirius</span>
+      <div className="nav-tabs">
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            className={`nav-tab${active === tab.id ? " active" : ""}`}
             onClick={() => onChange(tab.id)}
-            style={{
-              border: "none",
-              background: active === tab.id ? "var(--bg-hover)" : "transparent",
-              color: active === tab.id ? "var(--text)" : "var(--text-dim)",
-              borderRadius: "6px",
-            }}
           >
             {tab.label}
           </button>
