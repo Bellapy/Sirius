@@ -24,16 +24,18 @@ export function MentoriaTab({
 
   if (!active) {
     return (
-      <p className="empty-state">
-        Nenhuma sessão ativa. Abra um nó na aba Estudo (ou reabra um da Revisão) e clique em
-        "Iniciar Mentoria".
-      </p>
+      <div className="mentoria-zen">
+        <p className="empty-state" style={{ textAlign: "center" }}>
+          Nenhuma sessão ativa. Abra um nó na aba Estudo (ou reabra um da Revisão) e clique em
+          "Iniciar Mentoria".
+        </p>
+      </div>
     );
   }
 
   if (ended) {
     return (
-      <div>
+      <div className="mentoria-zen">
         <h2>Sessão encerrada</h2>
         <p className="muted">
           O estado do nó "{active.nodeLabel}" foi atualizado. Volte para Estudo para ver.
@@ -80,21 +82,20 @@ export function MentoriaTab({
   }
 
   return (
-    <div>
-      <div className="mentoria-node-label">Mentoria · {active.nodeLabel}</div>
+    <div className="mentoria-zen">
+      <div className="mentoria-eyebrow">Mentoria · {active.nodeLabel}</div>
       <div className="mentoria-card">
         <p className="mentoria-question">{active.currentQuestion}</p>
       </div>
-      <div className="stack-gap-md">
+      <div className="mentoria-form">
         <textarea
           rows={5}
-          style={{ width: "100%" }}
           placeholder="Escreva sua resposta com suas próprias palavras..."
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
         />
         {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
-        <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div className="mentoria-actions">
           <button className="primary" disabled={sending || !answer.trim()} onClick={submit}>
             {sending ? <span className="spinner" /> : null} Responder
           </button>

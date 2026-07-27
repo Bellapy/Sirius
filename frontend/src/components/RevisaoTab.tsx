@@ -23,8 +23,8 @@ export function RevisaoTab({ onReopenMentoria }: { onReopenMentoria: (nodeId: st
 
   return (
     <div>
-      <h2>Revisão</h2>
-      <p className="muted">Nós com sessão de mentoria — os não validados aparecem primeiro, pra refazer.</p>
+      <h1>Revisão</h1>
+      <p className="lede">Nós com sessão de mentoria — os não validados aparecem primeiro, pra refazer.</p>
       {items.length === 0 ? (
         <p className="empty-state">Nenhuma sessão de mentoria ainda.</p>
       ) : (

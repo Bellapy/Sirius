@@ -46,8 +46,8 @@ export function MapasTab({ onOpenRoadmap }: { onOpenRoadmap: (slug: string) => v
 
   return (
     <div>
-      <h2>Mapas</h2>
-      <p className="muted">
+      <h1>Mapas</h1>
+      <p className="lede">
         Escolha um roadmap do <code>developer-roadmap</code> para estudar. Importar carrega a
         estrutura original; em seguida a classificação de tipos e conexões roda uma única vez
         (modo simulado por padrão, sem custo).

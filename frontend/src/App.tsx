@@ -52,7 +52,7 @@ function App() {
             <EstudoTab roadmapSlug={selectedRoadmap} onStartMentoria={startMentoria} />
           </div>
         ) : (
-          <div className={`page-inner${activeTab === "mentoria" ? " narrow" : ""}`}>
+          <div className={`page-inner${activeTab === "mentoria" ? " zen" : ""}`}>
             {activeTab === "mapas" && <MapasTab onOpenRoadmap={openRoadmap} />}
             {activeTab === "mentoria" && (
               <MentoriaTab
