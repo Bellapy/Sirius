@@ -77,3 +77,11 @@ class SimulatedAIProvider(AIProvider):
         if not history:
             return "Antes de eu confirmar: como voce explicaria isso pra alguem que nunca ouviu falar do assunto, sem usar os termos tecnicos do texto?"
         return f"[simulado] Interessante — o que aconteceria se essa premissa que voce descreveu ('{user_message[:40]}...') falhasse na pratica?"
+
+    def mentoria_veredito(self, node_content: str, history: list[MentoriaTurn]) -> tuple[bool, str]:
+        respostas_substanciais = [
+            t for t in history if t.role == "usuario" and len(t.text.strip()) > 15
+        ]
+        if respostas_substanciais:
+            return True, "[simulado] Respostas demonstraram entendimento real, nao so decoreba."
+        return False, "[simulado] Sessao curta demais ou respostas rasas para validar."

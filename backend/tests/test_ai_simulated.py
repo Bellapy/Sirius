@@ -99,3 +99,20 @@ def test_mentoria_reply_followup_uses_history(provider):
     history = [MentoriaTurn(role="mentora", text="pergunta inicial?")]
     reply = provider.mentoria_reply("conteudo do no", history=history, user_message="minha resposta")
     assert "?" in reply
+
+
+def test_mentoria_veredito_false_without_substantial_user_answers(provider):
+    history = [MentoriaTurn(role="mentora", text="pergunta inicial?")]
+    validado, motivo = provider.mentoria_veredito("conteudo do no", history)
+    assert validado is False
+    assert motivo
+
+
+def test_mentoria_veredito_true_with_substantial_user_answer(provider):
+    history = [
+        MentoriaTurn(role="mentora", text="pergunta inicial?"),
+        MentoriaTurn(role="usuario", text="uma resposta bem mais elaborada e substancial sobre o tema"),
+    ]
+    validado, motivo = provider.mentoria_veredito("conteudo do no", history)
+    assert validado is True
+    assert motivo

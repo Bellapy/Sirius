@@ -55,6 +55,14 @@ MENTORA_SYSTEM = (
     "menos que o usuario — sem monologos longos."
 )
 
+VEREDITO_SYSTEM = (
+    "Voce e uma avaliadora tecnica senior, estilo entrevista de emprego. "
+    "Dado o conteudo de um topico e a transcricao de uma sessao de mentoria "
+    "socratica sobre ele, decida se o usuario demonstrou entendimento real "
+    "(nao so memorizacao). Responda so em JSON: "
+    "{\"validado\": true|false, \"motivo\": \"<frase curta>\"}."
+)
+
 
 def _cached_system(text: str) -> list[dict]:
     return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
@@ -176,6 +184,24 @@ class AnthropicAIProvider(AIProvider):
             messages=messages,
         )
         return response.content[0].text
+
+    def mentoria_veredito(self, node_content: str, history: list[MentoriaTurn]) -> tuple[bool, str]:
+        transcript = "\n".join(f"{t.role}: {t.text}" for t in history)
+        response = self.client.messages.create(
+            model=TASK_MODELS["mentoria_reply"],
+            max_tokens=128,
+            system=_cached_system(VEREDITO_SYSTEM),
+            messages=[{
+                "role": "user",
+                "content": f"Conteudo do topico:\n{node_content}\n\nTranscricao da sessao:\n{transcript}",
+            }],
+        )
+        raw = response.content[0].text.strip()
+        try:
+            data = json.loads(raw)
+            return bool(data["validado"]), str(data.get("motivo", ""))
+        except (json.JSONDecodeError, KeyError):
+            return False, "resposta da avaliacao em formato inesperado"
 
     def _run_batch(self, requests: list) -> dict[str, str]:
         batch = self.client.messages.batches.create(requests=requests)

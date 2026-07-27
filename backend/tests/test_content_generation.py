@@ -51,6 +51,9 @@ class _AlwaysReproveProvider(AIProvider):
     def mentoria_reply(self, node_content, history, user_message) -> str:
         raise NotImplementedError
 
+    def mentoria_veredito(self, node_content, history):
+        raise NotImplementedError
+
 
 def test_generate_and_audit_marks_revisar_manualmente_after_max_attempts():
     provider = _AlwaysReproveProvider()
@@ -84,6 +87,9 @@ class _ApprovesOnSecondTryProvider(AIProvider):
         return AuditResult(False, "motivo da primeira reprovacao")
 
     def mentoria_reply(self, node_content, history, user_message) -> str:
+        raise NotImplementedError
+
+    def mentoria_veredito(self, node_content, history):
         raise NotImplementedError
 
 

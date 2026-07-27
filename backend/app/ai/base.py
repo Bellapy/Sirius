@@ -46,3 +46,9 @@ class AIProvider(ABC):
     ) -> str:
         """Proxima fala da mentora socratica, dado o conteudo do no e o historico
         da sessao atual."""
+
+    @abstractmethod
+    def mentoria_veredito(self, node_content: str, history: list[MentoriaTurn]) -> tuple[bool, str]:
+        """Veredito final da sessao (validado, motivo curto), separado da
+        conversa — so usado para atualizar o estado visual do no, nunca
+        exposto como nota ao usuario."""
