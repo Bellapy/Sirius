@@ -31,14 +31,16 @@ export function RevisaoTab({ onReopenMentoria }: { onReopenMentoria: (nodeId: st
         <ul className="list">
           {items.map((item) => (
             <li key={item.node_id} className="list-item">
-              <div>
-                <div className="list-item-title">{item.label}</div>
-                <div className="list-item-sub">{item.roadmap_origin}</div>
+              <div className="list-item-info">
+                <div>
+                  <div className="list-item-title">{item.label}</div>
+                  <div className="list-item-sub">{item.roadmap_origin}</div>
+                </div>
+                <span className={`badge${item.veredito_validado ? " badge-validado" : " badge-pendente"}`}>
+                  <span className="badge-dot" /> {item.veredito_validado ? "validado" : "não validado"}
+                </span>
               </div>
-              <span className={`badge${item.veredito_validado ? " badge-validado" : " badge-pendente"}`}>
-                <span className="badge-dot" /> {item.veredito_validado ? "validado" : "não validado"}
-              </span>
-              <button className="primary" onClick={() => onReopenMentoria(item.node_id)}>
+              <button className="primary list-item-action" onClick={() => onReopenMentoria(item.node_id)}>
                 Refazer
               </button>
             </li>

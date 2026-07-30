@@ -11,6 +11,7 @@ export interface GraphNode {
   label: string;
   node_type: NodeType | null;
   status: NodeStatus;
+  description_md: string | null;
 }
 
 export interface GraphEdge {

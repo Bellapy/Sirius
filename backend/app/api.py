@@ -84,6 +84,7 @@ def get_roadmap_graph(slug: str, conn=Depends(get_db)):
             "label": n["label"],
             "node_type": node_types.get(n["id"]),
             "status": progress["status"],
+            "description_md": n["description_md"],
         })
     return {"nodes": out_nodes, "edges": edges}
 

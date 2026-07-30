@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import ReactFlow, { Background, Controls, type Edge, type Node } from "reactflow";
-import "reactflow/dist/style.css";
 import { api } from "../api";
-import { layoutNodes } from "../graphLayout";
+import { excerptFromMarkdown } from "../markdownExcerpt";
 import type { GraphEdge, GraphNode, NodeDetail } from "../types";
-import { SimpleMarkdown } from "./SimpleMarkdown";
+import { NodeDetailModal } from "./NodeDetailModal";
 
-const NODE_TYPE_LABEL: Record<string, string> = {
-  branch: "ramificação",
-  atomic_comparable: "atômico comparável",
-  atomic_conceptual: "atômico conceitual",
+type StepState = "concluido" | "atual" | "futuro";
+
+const STEP_LABEL: Record<StepState, string> = {
+  concluido: "Concluído",
+  atual: "Passo atual",
+  futuro: "Ainda não estudado",
 };
 
 function buildChildrenMap(edges: GraphEdge[]): Map<string, string[]> {
@@ -20,6 +20,12 @@ function buildChildrenMap(edges: GraphEdge[]): Map<string, string[]> {
     map.get(e.source_id)!.push(e.target_id);
   }
   return map;
+}
+
+function progressRingStyle(pct: number) {
+  return {
+    background: `conic-gradient(var(--lilac) ${pct * 3.6}deg, var(--border) 0deg)`,
+  };
 }
 
 export function EstudoTab({
@@ -67,35 +73,20 @@ export function EstudoTab({
   }, [graph]);
 
   const currentNodeIds = path.length === 0 ? rootIds : childrenMap.get(path[path.length - 1]) || [];
+  const currentNodes = useMemo(
+    () => currentNodeIds.map((id) => nodeById.get(id)).filter((n): n is GraphNode => Boolean(n)),
+    [currentNodeIds, nodeById]
+  );
 
-  const { flowNodes, flowEdges } = useMemo(() => {
-    if (!graph) return { flowNodes: [] as Node[], flowEdges: [] as Edge[] };
-    const currentNodes = currentNodeIds.map((id) => nodeById.get(id)!).filter(Boolean);
-    const idSet = new Set(currentNodeIds);
-    const currentEdges = graph.edges.filter((e) => idSet.has(e.source_id) && idSet.has(e.target_id));
-    const positions = layoutNodes(currentNodes, currentEdges);
+  const currentStepIndex = currentNodes.findIndex((n) => n.status !== "validado");
+  const validatedCount = currentNodes.filter((n) => n.status === "validado").length;
+  const progressPct = currentNodes.length ? Math.round((validatedCount / currentNodes.length) * 100) : 0;
 
-    const flowNodes: Node[] = currentNodes.map((n) => {
-      const childCount = childrenMap.get(n.id)?.length || 0;
-      return {
-        id: n.id,
-        position: positions[n.id],
-        data: { label: n.label },
-        className: `rf-node type-${n.node_type} status-${n.status}${childCount ? " has-children" : ""}`,
-      };
-    });
-    const flowEdges: Edge[] = currentEdges.map((e) => ({
-      id: `${e.source_id}->${e.target_id}-${e.relation_type}`,
-      source: e.source_id,
-      target: e.target_id,
-      label: e.relation_type === "prerequisite_of" ? undefined : e.relation_type,
-      style: { stroke: e.origin === "llm_inferred" ? "var(--accent-dim)" : "var(--text-faint)" },
-      labelStyle: { fill: "var(--text-dim)", fontSize: 11 },
-      animated: false,
-    }));
-    return { flowNodes, flowEdges };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, path]);
+  function stepStateFor(node: GraphNode, idx: number): StepState {
+    if (node.status === "validado") return "concluido";
+    if (idx === currentStepIndex) return "atual";
+    return "futuro";
+  }
 
   async function openNode(nodeId: string) {
     setLoadingNode(true);
@@ -124,7 +115,7 @@ export function EstudoTab({
   if (!graph) {
     return (
       <div className="loading-state">
-        <span className="spinner" /> Carregando grafo...
+        <span className="spinner" /> Carregando trilha...
       </div>
     );
   }
@@ -132,98 +123,107 @@ export function EstudoTab({
   const selectedChildCount = selected ? childrenMap.get(selected.id)?.length || 0 : 0;
 
   return (
-    <div className="estudo-layout">
-      <div className="graph-pane">
-        <div className="breadcrumb">
-          <button
-            className={`breadcrumb-item${path.length === 0 ? " current" : ""}`}
-            onClick={() => setPath([])}
-          >
-            Visão geral
-          </button>
-          {path.map((id, i) => (
-            <span key={id} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-              <span className="breadcrumb-sep">›</span>
+    <div className="trail-layout">
+      <div className="trail-main">
+        <div className="trail-header">
+          <div className="breadcrumb">
+            <button
+              className={`breadcrumb-item${path.length === 0 ? " current" : ""}`}
+              onClick={() => setPath([])}
+            >
+              Visão geral
+            </button>
+            {path.map((id, i) => (
+              <span key={id} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span className="breadcrumb-sep">›</span>
+                <button
+                  className={`breadcrumb-item${i === path.length - 1 ? " current" : ""}`}
+                  onClick={() => setPath(path.slice(0, i + 1))}
+                >
+                  {nodeById.get(id)?.label || id}
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {currentNodes.length > 0 && (
+            <div className="trail-progress">
+              <div className="progress-ring" style={progressRingStyle(progressPct)}>
+                <span className="progress-ring-value">{progressPct}%</span>
+              </div>
+              <span className="trail-progress-label">progresso desta trilha</span>
+            </div>
+          )}
+        </div>
+
+        <div className="trail-list">
+          <div className="trail-start-marker">
+            <span className="trail-start-dot" />
+            Início da trilha
+          </div>
+
+          {currentNodes.map((n, i) => {
+            const state = stepStateFor(n, i);
+            const childCount = childrenMap.get(n.id)?.length || 0;
+            const excerpt = excerptFromMarkdown(n.description_md);
+            return (
               <button
-                className={`breadcrumb-item${i === path.length - 1 ? " current" : ""}`}
-                onClick={() => setPath(path.slice(0, i + 1))}
+                key={n.id}
+                className={`trail-card state-${state}`}
+                onClick={() => openNode(n.id)}
               >
-                {nodeById.get(id)?.label || id}
+                <span className="trail-card-badge">Etapa {i + 1}</span>
+                <h3 className="trail-card-title">{n.label}</h3>
+                {excerpt && <p className="trail-card-desc">{excerpt}</p>}
+                <div className="trail-card-footer">
+                  <span>{STEP_LABEL[state]}</span>
+                  {childCount > 0 && <span>{childCount} sub-tópicos ›</span>}
+                </div>
               </button>
-            </span>
-          ))}
-        </div>
+            );
+          })}
 
-        <div className="graph-canvas">
-          <ReactFlow nodes={flowNodes} edges={flowEdges} onNodeClick={(_, node) => openNode(node.id)} fitView>
-            <Background color="var(--border-soft)" gap={22} />
-            <Controls />
-          </ReactFlow>
-        </div>
-
-        <div className="graph-legend">
-          <span className="legend-item">
-            <span className="legend-swatch" /> não iniciado
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch status-lido" /> lido
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch status-validado" /> validado pela mentora
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch shape-branch" /> ramificação
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch shape-atomic_comparable" /> atômico comparável
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch shape-atomic_conceptual" /> atômico conceitual
-          </span>
-          <span className="legend-item">nó com "···" tem sub-tópicos — clique e depois "Ver sub-tópicos"</span>
+          {currentNodes.length === 0 && (
+            <p className="empty-state">Esse tópico não tem sub-tópicos próprios ainda.</p>
+          )}
         </div>
       </div>
 
+      <aside className="trail-sidebar">
+        <h4 className="trail-sidebar-title">Trilha da jornada</h4>
+        <ul className="trail-sidebar-list">
+          {currentNodes.map((n, i) => {
+            const state = stepStateFor(n, i);
+            return (
+              <li key={n.id} className={`trail-sidebar-item state-${state}`} onClick={() => openNode(n.id)}>
+                {state === "atual" ? (
+                  <span className="trail-sidebar-dot-pulse" />
+                ) : (
+                  <span className="trail-sidebar-icon">{state === "concluido" ? "✓" : ""}</span>
+                )}
+                {n.label}
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="trail-reminder-card">
+          <h5>Lembrete</h5>
+          <p>Grandes conquistas começam com pequenos passos consistentes.</p>
+        </div>
+      </aside>
+
       {selected && (
-        <aside className="detail-panel">
-          <div className="detail-panel-header">
-            <button className="ghost" onClick={() => setSelected(null)} style={{ marginBottom: "0.6rem" }}>
-              ← Fechar
-            </button>
-            <h2 style={{ marginBottom: "0.4rem" }}>{selected.label}</h2>
-            <div className="detail-panel-badges">
-              <span className="badge">{NODE_TYPE_LABEL[selected.node_type] || selected.node_type}</span>
-              <span className={`badge${selected.status === "validado" ? " badge-validado" : " badge-pendente"}`}>
-                <span className="badge-dot" /> {selected.status.replace("_", " ")}
-              </span>
-            </div>
-          </div>
-          <div className="detail-panel-body">
-            {selected.generated_content?.status === "revisar_manualmente" && (
-              <div className="warn-box">Este conteúdo reprovou a auditoria 2x e precisa de revisão manual.</div>
-            )}
-            {selected.generated_content && <SimpleMarkdown text={selected.generated_content.texto} />}
-          </div>
-          <div className="detail-panel-footer">
-            {selectedChildCount > 0 && (
-              <button
-                onClick={() => {
-                  setPath([...path, selected.id]);
-                  setSelected(null);
-                }}
-              >
-                Ver sub-tópicos ({selectedChildCount})
-              </button>
-            )}
-            <button
-              className="primary"
-              disabled={!selected.generated_content}
-              onClick={() => onStartMentoria(selected.id)}
-            >
-              Iniciar Mentoria
-            </button>
-          </div>
-        </aside>
+        <NodeDetailModal
+          node={selected}
+          childCount={selectedChildCount}
+          onClose={() => setSelected(null)}
+          onDrillIn={() => {
+            setPath([...path, selected.id]);
+            setSelected(null);
+          }}
+          onStartMentoria={() => onStartMentoria(selected.id)}
+        />
       )}
 
       {loadingNode && (

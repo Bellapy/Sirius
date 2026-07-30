@@ -56,6 +56,7 @@ def test_enrich_then_graph_returns_classified_nodes(client):
     branch = next(n for n in graph["nodes"] if n["id"] == "r:branch1")
     assert branch["node_type"] == "branch"
     assert branch["status"] == "nao_iniciado"
+    assert branch["description_md"] == "sobre bancos"
 
 
 def test_get_node_detail_generates_content_lazily_and_marks_lido(client):
