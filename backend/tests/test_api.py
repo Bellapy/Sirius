@@ -10,7 +10,6 @@ from app.main import app
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):
-    monkeypatch.setattr("app.embeddings.EMBEDDING_MODE", "simulated")
     monkeypatch.setattr("app.db.DB_PATH", tmp_path / "unused.db")
 
     conn = sqlite3.connect(":memory:", check_same_thread=False)

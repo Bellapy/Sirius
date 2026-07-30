@@ -7,6 +7,12 @@ RelationType = Literal[
     "prerequisite_of", "alternative_to", "contrasts_with", "composes_with", "applied_in"
 ]
 
+VALID_RELATION_TYPES = (
+    "prerequisite_of", "alternative_to", "contrasts_with", "composes_with", "applied_in"
+)
+
+VALID_NODE_TYPES = ("atomic_comparable", "atomic_conceptual", "branch")
+
 
 @dataclass
 class EdgeContext:

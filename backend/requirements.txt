@@ -6,5 +6,8 @@ numpy
 networkx
 sentence-transformers
 anthropic
+google-genai
+groq
+python-dotenv
 pytest
 httpx

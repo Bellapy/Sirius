@@ -28,6 +28,20 @@ def test_get_provider_real_without_key_raises(monkeypatch):
         get_provider()
 
 
+def test_get_provider_google_without_key_raises(monkeypatch):
+    monkeypatch.setattr("app.ai.factory.AI_MODE", "google")
+    monkeypatch.setattr("app.ai.factory.GOOGLE_API_KEY", None)
+    with pytest.raises(RuntimeError, match="GOOGLE_API_KEY"):
+        get_provider()
+
+
+def test_get_provider_groq_without_key_raises(monkeypatch):
+    monkeypatch.setattr("app.ai.factory.AI_MODE", "groq")
+    monkeypatch.setattr("app.ai.factory.GROQ_API_KEY", None)
+    with pytest.raises(RuntimeError, match="GROQ_API_KEY"):
+        get_provider()
+
+
 def test_get_provider_unknown_mode_raises(monkeypatch):
     monkeypatch.setattr("app.ai.factory.AI_MODE", "bogus")
     with pytest.raises(ValueError):

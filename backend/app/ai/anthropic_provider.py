@@ -6,6 +6,7 @@ import anthropic
 
 from app.ai.base import AIProvider
 from app.ai.model_routing import TASK_MODELS
+from app.ai.parsing import parse_edge_classification, parse_node_type
 from app.ai.types import (
     AuditResult,
     ContentGenerationInput,
@@ -100,7 +101,7 @@ class AnthropicAIProvider(AIProvider):
             for item, req in zip(items, requests)
         ]
         results_by_id = self._run_batch(batch_requests)
-        return [self._parse_node_type(results_by_id.get(item.node_id), item.structural_guess) for item in items]
+        return [parse_node_type(results_by_id.get(item.node_id), item.structural_guess) for item in items]
 
     def classify_edges(
         self, items: list[EdgeClassificationInput]
@@ -126,7 +127,7 @@ class AnthropicAIProvider(AIProvider):
             for item in items
         ]
         results_by_id = self._run_batch(batch_requests)
-        return [self._parse_edge_result(results_by_id.get(item.pair_id)) for item in items]
+        return [parse_edge_classification(results_by_id.get(item.pair_id)) for item in items]
 
     def generate_content(self, item: ContentGenerationInput) -> str:
         edges_json = json.dumps([
@@ -216,25 +217,3 @@ class AnthropicAIProvider(AIProvider):
                 results[entry.custom_id] = entry.result.message.content[0].text
         return results
 
-    @staticmethod
-    def _parse_node_type(raw: Optional[str], fallback: NodeType) -> NodeType:
-        if raw is None:
-            return fallback
-        cleaned = raw.strip().lower()
-        if cleaned in ("atomic_comparable", "atomic_conceptual", "branch"):
-            return cleaned  # type: ignore[return-value]
-        return fallback
-
-    @staticmethod
-    def _parse_edge_result(raw: Optional[str]) -> Optional[EdgeClassificationResult]:
-        if raw is None:
-            return None
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return None
-        if data.get("relation_type") == "none":
-            return None
-        return EdgeClassificationResult(
-            relation_type=data["relation_type"], confidence=float(data.get("confidence", 0.5))
-        )
